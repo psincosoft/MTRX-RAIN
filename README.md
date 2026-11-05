@@ -23,6 +23,8 @@ MEGA65.
 2. `MOUNT "MTRX-RAIN.D81"`
 3. `LOAD"*",8,1`, then `RUN`
 
+The disk's SHA-256: `c1cd3c976ce4943d3a01a223d12ef11c782d5b29b49dec95d33ddcf479348c14`.
+
 The opening card, then the rain. The bottom row shows the settings; K shows the keys.
 
 ## Keys

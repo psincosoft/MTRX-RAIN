@@ -2,48 +2,35 @@
 
 Every frame the engine leaves in its screen, colour RAM, character set and palette is drawn as the
 VIC-IV draws 80 x 50 text (model.render's rule, with numpy here), two picture pixels to a MEGA65
-pixel; every frame's registers of the four SIDs go through reSIDfp (pyresidfp, the 6581 model: not
-the MEGA65's own SIDs), 50 frames a second, in stereo as the MEGA65's default mix has it (SIDs 1-2
-right, 3-4 left: x0.74 to their own side, x0.25 to the other). The engine runs in test_engine.py's
-model of the machine, with all of that run's checks.
+pixel. The engine runs in test_engine.py's model of the machine, with all of that run's checks.
 
-One session, at the start's settings (speed 35 %, density 50 %, SOUND+HUMM):
-  frame 900                 GREEN                         mtrx-rain-green.png
-  P, then 3 s               AMBER                         mtrx-rain-gold.png
-  P, then 3 s               ICE                           mtrx-rain-ice.png
-  P, P                      RAINBOW, from green; the video from here, 42 s, with SPACE (time
-                            stops) 24 s in and SPACE (time runs) 3.5 s later
-  RAINBOW at red            the first frame its hue is red  mtrx-rain-red.png
+Two sessions, both from the start's settings (speed 35 %, density 50 %):
+  pictures  frame 900 GREEN (mtrx-rain-green.png); P, 3 s on: AMBER (mtrx-rain-gold.png); P, 3 s
+            on: ICE (mtrx-rain-ice.png); P, P: RAINBOW, from green; the first frame its hue is red:
+            mtrx-rain-red.png; then Q
+  video     K, K at once: the bottom row hidden, the rain on all 50 rows; GREEN for 18 s; then
+            P four times in one frame: RAINBOW, from green; from there 42 s, mtrx-rain-rainbow.mp4,
+            full screen and silent
 Usage: python3 media.py BUILD OUTDIR [trial]   (trial: a few seconds of each, no red picture)
 """
 import subprocess
 import sys
-import wave
-from datetime import timedelta
 from pathlib import Path
 
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import gen_engine as E  # noqa: E402
 import model as M  # noqa: E402
 import test_engine as T  # noqa: E402
 
-RATE = 44100
 SCALE = 2
 TRIAL = len(sys.argv) > 3 and sys.argv[3] == 'trial'
 GREEN_AT, STEP = (60, 20) if TRIAL else (900, 150)
 RAINBOW_AT = GREEN_AT + 2 * STEP + 3          # the frame RAINBOW is chosen (P on PAPER)
-VIDEO_FROM = RAINBOW_AT + 2
-VIDEO_FRAMES = 150 if TRIAL else 42 * 50
-STOP_AT, STOP_FOR = (VIDEO_FROM + 50, 40) if TRIAL else (VIDEO_FROM + 24 * 50, 175)
 RED = range(166, 177)                         # RAINBOW's hues that are red (the wheel's 171)
-
-
-def keys():
-    return [(GREEN_AT + 2, T.P), (GREEN_AT + STEP + 2, T.P), (GREEN_AT + 2 * STEP + 2, T.P),
-            (RAINBOW_AT, T.P), (STOP_AT, T.SPACE), (STOP_AT + STOP_FOR, T.SPACE)]
+VIDEO_FROM = 100 if TRIAL else 900
+VIDEO_FRAMES = 150 if TRIAL else 42 * 50
 
 
 def glyph_bits(cs):
@@ -66,112 +53,98 @@ def scaled(img):
     return np.repeat(np.repeat(img, SCALE, axis=0), SCALE, axis=1)
 
 
-def save_png(img, path):
-    from PIL import Image
-    Image.fromarray(scaled(img)).save(path)
+def snap(m):
+    scr, col, cs, rgb = m.picture()
+    return (scr, col, rgb, bool(m.vic[0xD016] & 0x10), bool(m.vic[0xD063] & 0x40), m.vic[0xD021]), cs
 
 
-def synth(states):
-    """Stereo samples (n x 2, float) for the frames' register states: SIDs 1-2 right, 3-4 left."""
-    from pyresidfp import SoundInterfaceDevice
-    from pyresidfp._pyresidfp import ChipModel
-    from pyresidfp.registers import WritableRegister as W
-    regs = list(W)
-    chips = [SoundInterfaceDevice(model=ChipModel.MOS6581, clock_frequency=E.SID_CLOCK, sampling_frequency=RATE)
-             for _ in range(4)]
-    out = []
-    for st in states:
-        parts = []
-        for k, chip in enumerate(chips):
-            base = 0x20 * k
-            for r in regs:
-                chip.write_register(r, st[base + r.value])
-            parts.append(np.array(chip.clock(timedelta(seconds=1 / 50)), dtype=np.float64))
-        n = min(len(p) for p in parts)
-        right = parts[0][:n] + parts[1][:n]
-        left = parts[2][:n] + parts[3][:n]
-        out.append(np.stack([0.74 * left + 0.25 * right, 0.74 * right + 0.25 * left], axis=1))
-    return out
-
-
-def main():
-    bd, out = Path(sys.argv[1]), Path(sys.argv[2])
-    out.mkdir(parents=True, exist_ok=True)
-    last = VIDEO_FROM + VIDEO_FRAMES
-    mc = T.Machine(bd, limit=last + 2, keys=keys())
-    sids, frames, shots, hues = {}, {}, {}, {}
-    state = {'red': None}
+def pictures(bd, out):
+    """GREEN, AMBER, ICE and RAINBOW at red, each checked cell by cell; True if all is well."""
+    keys = [(GREEN_AT + 2, T.P), (GREEN_AT + STEP + 2, T.P), (GREEN_AT + 2 * STEP + 2, T.P), (RAINBOW_AT, T.P)]
+    mc = T.Machine(bd, limit=6000, keys=keys)
+    shots = {}
 
     def on_frame(m, fr):
-        sids[fr] = bytes(m.sid)
-        hue, theme = m.var('HUE'), m.var('THEME')
-        if fr % 50 == 0:
-            hues[fr] = (theme, hue)
         want = {GREEN_AT: 'green', GREEN_AT + STEP: 'gold', GREEN_AT + 2 * STEP: 'ice'}.get(fr)
-        if state['red'] is None and fr >= VIDEO_FROM and theme == M.T_RAINBOW and hue in RED:
-            state['red'] = fr
+        if 'red' not in shots and fr > RAINBOW_AT and m.var('THEME') == M.T_RAINBOW and m.var('HUE') in RED:
             want = 'red'
-        if want or VIDEO_FROM <= fr < last:
-            scr, col, cs, rgb = m.picture()
-            snap = (scr, col, rgb, bool(m.vic[0xD016] & 0x10), bool(m.vic[0xD063] & 0x40), m.vic[0xD021])
-            if want:
-                shots[want] = (fr, snap, cs, m.check_screen(fr))
-            if VIDEO_FROM <= fr < last:
-                frames[fr] = snap
-                state['cs'] = cs
+            m.keys.append((fr + 1, T.Q))
+        if TRIAL and fr == GREEN_AT + 2 * STEP + 1:
+            m.keys.append((fr + 1, T.Q))
+        if want:
+            s, cs = snap(m)
+            shots[want] = (fr, s, cs, m.check_screen(fr))
 
     code, steps = mc.call(limit_steps=150_000_000, on_frame=on_frame)
-    ok = mc.after('media', M.EXIT_LIMIT)
-    print(f"  {steps} instructions, {len(sids)} frames")
+    ok = mc.after('pictures', M.EXIT_QUIT)
+    print(f"  {steps} instructions")
     for name in ('green', 'gold', 'ice') + (() if TRIAL else ('red',)):
         if name not in shots:
-            sys.exit(f"no {name} picture (red: RAINBOW's hue never reached {RED.start}-{RED.stop - 1})")
+            sys.exit(f"no {name} picture")
         fr, (scr, col, rgb, mcm, fcol, bg), cs, probs = shots[name]
         if probs:
             print(f"  {name}: {probs}")
             ok = False
-        bits = glyph_bits(cs)
-        img = picture(scr, col, bits, rgb, mcm, fcol, bg)
+        img = picture(scr, col, glyph_bits(cs), rgb, mcm, fcol, bg)
         ref, _ = M.render(scr, col, cs, rgb, mcm, fcol, bg)
         if not np.array_equal(img, np.asarray(ref)):
             print(f"  {name}: the numpy picture differs from model.render's")
             ok = False
-        save_png(img, out / f"mtrx-rain-{name}.png")
+        from PIL import Image
+        Image.fromarray(scaled(img)).save(out / f"mtrx-rain-{name}.png")
         print(f"  mtrx-rain-{name}.png: frame {fr}")
-    print("  RAINBOW's hue each second:", ' '.join(f"{h}" for f, (t, h) in sorted(hues.items()) if t == M.T_RAINBOW))
-    # the sound: every frame from the start (the envelopes as they were), the video's frames cut out;
-    # a frame the engine did not reach in time keeps the registers of the one before
-    seq, prev = [], bytes(0x80)
-    for fr in range(last):
-        prev = sids.get(fr, prev)
-        seq.append(prev)
-    pcm = synth(seq)
-    clip = np.concatenate(pcm[VIDEO_FROM:last])
-    peak = max(1.0, np.abs(clip).max())
-    pcm16 = (clip / peak * 27000).astype(np.int16)
-    wav = out / 'mtrx-rain-rainbow.wav'
-    with wave.open(str(wav), 'wb') as w:
-        w.setnchannels(2)
-        w.setsampwidth(2)
-        w.setframerate(RATE)
-        w.writeframes(pcm16.tobytes())
-    # the picture: raw frames into ffmpeg
+    return ok
+
+
+def video(bd, out):
+    """RAINBOW on the full screen, silent; True if all is well."""
+    last = VIDEO_FROM + VIDEO_FRAMES
+    keys = [(50, T.K), (52, T.K)] + [(VIDEO_FROM - 2, T.P)] * 4
+    mc = T.Machine(bd, limit=last + 2, keys=keys)
+    frames, hues, state = {}, {}, {}
+    checks = [VIDEO_FROM, VIDEO_FROM + VIDEO_FRAMES // 2, last - 1]
+
+    def on_frame(m, fr):
+        if VIDEO_FROM <= fr < last:
+            s, cs = snap(m)
+            frames[fr] = s
+            state['cs'] = cs
+            if fr % 50 == 0:
+                hues[fr] = m.var('HUE')
+            if fr in checks:
+                state[fr] = (m.check_screen(fr), m.var('BARPG'), m.var('NROWS'), m.var('THEME'))
+
+    code, steps = mc.call(limit_steps=150_000_000, on_frame=on_frame)
+    ok = mc.after('video', M.EXIT_LIMIT)
+    print(f"  {steps} instructions")
+    for fr in checks:
+        probs, page, nrows, theme = state[fr]
+        good = not probs and page == 2 and nrows == 50 and theme == M.T_RAINBOW
+        print(f"  frame {fr}: {'full screen, RAINBOW, every cell as its state says' if good else (probs, page, nrows, theme)}")
+        ok &= good
+    print("  RAINBOW's hue each second:", ' '.join(str(h) for f, h in sorted(hues.items())))
     bits = glyph_bits(state['cs'])
     mp4 = out / 'mtrx-rain-rainbow.mp4'
-    h, w_ = 400 * SCALE, 640 * SCALE
+    h, w = 400 * SCALE, 640 * SCALE
     enc = subprocess.Popen(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24',
-                            '-s', f'{w_}x{h}', '-framerate', '50', '-i', '-', '-i', str(wav),
+                            '-s', f'{w}x{h}', '-framerate', '50', '-i', '-', '-an',
                             '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
-                            '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', str(mp4)],
-                           stdin=subprocess.PIPE)
+                            '-movflags', '+faststart', str(mp4)], stdin=subprocess.PIPE)
     for fr in range(VIDEO_FROM, last):
         scr, col, rgb, mcm, fcol, bg = frames[fr]
         enc.stdin.write(scaled(picture(scr, col, bits, rgb, mcm, fcol, bg)).tobytes())
     enc.stdin.close()
     if enc.wait():
         sys.exit('ffmpeg failed')
-    print(f"  {mp4.name}: {VIDEO_FRAMES} frames ({VIDEO_FRAMES / 50:.0f} s), time stopped at {(STOP_AT - VIDEO_FROM) / 50:.0f} s "
-          f"for {STOP_FOR / 50:.1f} s; the audio's peak {peak:.0f}")
+    print(f"  {mp4.name}: {VIDEO_FRAMES} frames ({VIDEO_FRAMES / 50:.0f} s), full screen, silent")
+    return ok
+
+
+def main():
+    bd, out = Path(sys.argv[1]), Path(sys.argv[2])
+    out.mkdir(parents=True, exist_ok=True)
+    ok = pictures(bd, out)
+    ok &= video(bd, out)
     print("ALL PASS" if ok else "FAILURES")
     sys.exit(0 if ok else 1)
 

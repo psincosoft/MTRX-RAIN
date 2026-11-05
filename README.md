@@ -10,10 +10,9 @@ Version 1.0, 5 November 2026.
 
 ![GREEN](docs/mtrx-rain-green.png)
 
-A 42-second video of RAINBOW, with its sound: [docs/mtrx-rain-rainbow.mp4](docs/mtrx-rain-rainbow.mp4).
-It is made on a PC from the program's own output: every frame the engine builds, through a model of
-the VIC-IV, and the SID registers it writes, through an emulation of the SID chip (reSIDfp, the
-6581). Time stops 24 s in and runs again 3.5 s later.
+A 42-second video of RAINBOW, full screen (K hides the bottom row) and silent:
+[docs/mtrx-rain-rainbow.mp4](docs/mtrx-rain-rainbow.mp4). It is made on a PC from the program's own
+output: every frame the engine builds, through a model of the VIC-IV.
 
 ## Run
 
@@ -88,12 +87,12 @@ cell's colour, the bottom row, the palettes.
 | `mega65/build.py` | the engine, the program and the disk |
 | `mega65/test_engine.py` | runs the engine against a model of the MEGA65 (screen, palette, keys, joysticks, multiplier, SIDs), frame by frame |
 | `mega65/test_launcher.py` | runs the program in the BASIC 65 simulator |
-| `mega65/media.py` | the pictures and the video, from the engine (reSIDfp for the sound) |
-| `mega65/CREDITS.txt`, `mega65/LICENSE.txt` | the credits and the licence, also on the disk |
+| `mega65/media.py` | the pictures and the video, from the engine |
+| `mega65/CREDITS.txt`, `mega65/LICENSE.txt` | the credits and the licence, as plain text |
 | `tools/` | assembler driver, transpiler, tokeniser, BASIC 65 simulator, disk writer and checker, font |
 
-`sh build.sh` rebuilds the disk in `out/` and runs the quick checks. It needs Python 3 with py65,
-numpy, pillow and d64; the video also pyresidfp and ffmpeg.
+`sh build.sh` rebuilds the release's disk in `out/`, byte for byte, and runs the quick checks. It
+needs Python 3 with py65, numpy, pillow and d64; the video also ffmpeg.
 
 ## Tested on
 
@@ -106,7 +105,7 @@ psinco. A Software Atelier from Luxembourg.
 
 The glyphs, the letters of the bottom row, the palettes and the sound are made by programs written
 for it; no image, sample or existing tune is used. How the VIC-IV draws text was read from the
-MEGA65 core's own source. Built with Python, py65, NumPy, Pillow and d64; the pictures and the video
-made with reSIDfp (pyresidfp) and FFmpeg. Details in `mega65/CREDITS.txt`, also on the disk.
+MEGA65 core's own source. Built with Python, py65, NumPy, Pillow and d64; the video made with
+FFmpeg. Details in `mega65/CREDITS.txt`.
 
 MIT licence: free to use, change and share, with the notice. See [LICENSE](LICENSE).

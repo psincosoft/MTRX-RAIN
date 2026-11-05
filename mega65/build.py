@@ -6,8 +6,8 @@ below its limit and the tables below the engine's own memory, no absolute access
 mailbox, no NOP anywhere but as the prefix of a flat (zp),Z (the 45GS02 would take any NOP before an
 (zp),Z instruction as the prefix); mtrx.b65 with the opening card (../../psinco-card/psinco-card.b65)
 preprocessed (bas65pp, lines of up to 160 characters), linted, tokenised and listed back; the D81
-written with the program first (LOAD"*"), AUTOBOOT.C65, the engine, the listing (SEQ) and the
-credits and licence (SEQ, 78 columns), then checked file by file.
+written with the program first (LOAD"*"), AUTOBOOT.C65, the engine and the listing (SEQ), then
+checked file by file.
 """
 import re
 import shutil
@@ -97,8 +97,7 @@ def main():
           f"{len((out / 'mtrx.bas').read_text().splitlines())} lines")
     disk = out / DISK_FILE
     entries = [('MTRX RAIN', out / 'mtrx.prg', 'prg'), ('AUTOBOOT.C65', out / 'mtrx.prg', 'prg'),
-               ('MTRX.ENG', out / 'MTRX.ENG', 'prg'), ('MTRX.BAS', out / 'mtrx.bas', 'listing'),
-               ('CREDITS', HERE / 'CREDITS.txt', 'text80'), ('LICENSE', HERE / 'LICENSE.txt', 'text80')]
+               ('MTRX.ENG', out / 'MTRX.ENG', 'prg'), ('MTRX.BAS', out / 'mtrx.bas', 'listing')]
     run('python3', TOOLS / 'make_d81.py', '--disk', disk, DISK_NAME, DISK_ID, *[f"{n}={p}:{k}" for n, p, k in entries])
     print(run('python3', TOOLS / 'check_d81.py', disk, *[f"{n}={p}" for n, p, k in entries if k == 'prg']).strip())
 

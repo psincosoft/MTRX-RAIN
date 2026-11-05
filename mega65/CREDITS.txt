@@ -1,0 +1,9 @@
+MTRX RAIN 1.0, 2026. Digital rain for the MEGA65, in 80 x 50 text. Strings of light fall through glyphs that stay where they are: half-width katakana, the kanji for sun, Z, digits and signs, all mirrored. One string in five has a white head; some strings only erase; some appear halfway down; the glyphs of some strings change all on one tick. SPACE or FIRE stops time and starts it again; CRSR left and right set the speed, up and down the density; P the palette (GREEN, AMBER, ICE, PAPER, RAINBOW); S the sound (SOUND, HUMM, SOUND+HUMM, NO SOUND); K the bar (the keys, no bar, the settings); Q or RUN/STOP ends it.
+
+By Dawid Blachowski, with Claude (Anthropic's AI). A psinco. production. (C) 2026 Dawid Blachowski. MIT licence: free to use, change and share, with the notice; see the file LICENSE.
+
+The glyphs (drawn by hand on the 8 x 8 grid), the letters of the bar, the palettes and the sound are our own, made by programs written for it; no image, sample or existing tune is used.
+
+The engine is 6502 machine code with a few 45GS02 instructions. It uses the VIC-IV's 80 x 50 text with multicolour and FCOLMCM for 128 levels of light, the palette, the hardware multiplier and the four SIDs: the humm on SIDs 1 and 3, the sound on SIDs 2 and 4. How the VIC-IV draws text was read from the MEGA65 core's own source (VHDL).
+
+Written with Claude, Anthropic's AI, which wrote the code and drew the glyphs under Dawid Blachowski's direction. Tested in our own tools (a 6502 emulator with a model of the MEGA65's screen, palette, keyboard, joysticks and SIDs, and a BASIC 65 simulator) and on Dawid Blachowski's MEGA65 (R6A, PAL, core 890-sdcard-native build 63, ROM 920422), which has the last word. Built with Python, py65, NumPy, Pillow and d64; the pictures and the video made with reSIDfp (pyresidfp) and FFmpeg.

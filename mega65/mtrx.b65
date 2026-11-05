@@ -1,0 +1,64 @@
+# mtrx.b65 -- MTRX RAIN for the MEGA65: the rain on the glass (BASIC 65 with a 45GS02 engine).
+# BASIC shows the opening card, switches to 80 x 50 text, loads the engine (MTRX.ENG) into bank 4 and
+# calls it; the engine runs the rain until Q or RUN/STOP and puts back everything it changed.
+# (C) 2026 Dawid Blachowski. A psinco. production. MIT licence.
+#
+# Memory: MTRX.ENG at $42000 (bank 4: CPU $2000-$7FFF while it runs; its screen at $46D00 and its
+# character set at $40000); the mailbox at $1E00 (bank 0).
+# The mailbox, BASIC to the engine: $1E00 flags (0), $1E01-$1E02 a frame limit (0: none), $1E03-$1E04
+# a seed (0: the engine takes one). The engine to BASIC: $1E20 how it ended ($51 Q or RUN/STOP, $57
+# not an 80-column screen), $1E21-$1E22 frames, $1E23 1 with 128 colour levels, 0 with 16.
+# Every BASIC variable beginning with Z belongs to the opening card.
+
+#define MBX_A $1E00
+
+#var w_found W0
+#var h_found H0
+#var border_found B0
+#var paper_found S0
+#var mode_set MF
+#var exit_code EX
+#var levels LV
+#var need$ E$
+#var err_no E1
+#var err_line E2
+#var i I
+
+#line 10
+  REM MTRX RAIN FOR THE MEGA65: THE RAIN ON THE GLASS.
+  REM (C) 2026 DAWID BLACHOWSKI, WITH CLAUDE (ANTHROPIC'S AI). A PSINCO. PRODUCTION. MIT LICENCE.
+  BANK 128: TRAP @trap: FAST: mode_set=0: exit_code=0: levels=1
+  w_found=RWINDOW(2): h_found=RWINDOW(3): border_found=PEEK($FFD3020): paper_found=PEEK($FFD3021)
+  mode_set=1: IF w_found<>80 OR h_found<>50 THEN PRINT CHR$(27);"5";
+  PRINT CHR$(142);CHR$(147);
+  GOSUB @pc_card: IF pc_key$="Q" OR pc_key$=CHR$(209) THEN GOTO @quit
+  IF RWINDOW(2)<>80 OR RWINDOW(3)<>50 THEN need$="ITS 80 X 50 TEXT SCREEN": GOTO @lack
+  POKE $FFD3020,0: POKE $FFD3021,0: CURSOR OFF: PRINT CHR$(147);
+  BLOAD "MTRX.ENG",P($42000)
+  IF PEEK($42003)<>77 OR PEEK($42004)<>84 OR PEEK($42005)<>82 THEN need$="ITS FILE MTRX.ENG": GOTO @lack
+  FOR i=0 TO 127: POKE $FFD3400+i,0: NEXT
+  POKE MBX_A,0,0,0,0,0: POKE MBX_A+32,238: BANK 4: SYS $2000: BANK 128
+  exit_code=PEEK(MBX_A+32): levels=PEEK(MBX_A+35)
+  IF exit_code=$57 THEN need$="ITS 80 X 50 TEXT SCREEN": GOTO @lack
+  IF exit_code<>$51 THEN need$="ITS ENGINE TO END WITH Q (IT ENDED WITH"+STR$(exit_code)+")": GOTO @lack
+@quit
+  GOSUB @cleanup: PRINT "MTRX RAIN ENDED."
+  IF levels=0 THEN PRINT "THIS CORE HAS NO FCOLMCM ($D063 BIT 6): THE RAIN RAN IN 16 COLOURS."
+  END
+@cleanup
+  # the SIDs silent; the card's colours, border and background, case, cursor and screen mode back
+  TRAP: FOR i=0 TO 127: POKE $FFD3400+i,0: NEXT: GOSUB @pc_restore
+  POKE $FFD3020,border_found: POKE $FFD3021,paper_found: CURSOR ON: PRINT CHR$(142);
+  IF mode_set=0 THEN RETURN
+  IF w_found=40 AND h_found=25 THEN PRINT CHR$(27);"4";
+  IF w_found=80 AND h_found=25 THEN PRINT CHR$(27);"8";
+  IF w_found=80 AND h_found=50 THEN PRINT CHR$(27);"5";
+  PRINT CHR$(147);: RETURN
+@trap
+  err_no=ER: err_line=EL: GOSUB @cleanup: IF err_no=30 THEN PRINT "MTRX RAIN STOPPED.": END
+  PRINT "MTRX RAIN STOPPED: ";ERR$(err_no);" IN LINE";err_line: END
+@lack
+  GOSUB @cleanup: PRINT "MTRX RAIN NEEDS ";need$;".": END
+
+#line 59000
+#include psinco-card.b65

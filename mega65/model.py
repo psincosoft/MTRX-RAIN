@@ -17,7 +17,7 @@ The rain in the MEGA65's terms:
   taken from GREEN, so that RAINBOW at its first step is GREEN in pure hues.
 - A core without FCOLMCM (the bit reads back 0) gets the fallback: no MCM, colours 0-15, the trail in
   13 steps.
-- Sound, S in turn: SOUND (the grains), HUMM (the drone), both, none; it starts with both.
+- Sound, S in turn: SOUND (the grains), HUMM (the drone), both, none; it starts with none.
 Usage: python3 model.py [OUT_DIR]   (palette sheets, the rainbow's wheel, the bar's text)
 """
 import math
@@ -49,7 +49,7 @@ CYCLES = 8                      # glyph changes a second at speed 100 % (times t
 MAXD = 240                      # strings at once
 EXIT_QUIT, EXIT_LIMIT, EXIT_MODE = 0x51, 0x4C, 0x57
 SOUND_MODES = ['SOUND', 'HUMM', 'SOUND+HUMM', 'NO SOUND']
-SOUND0 = 2
+SOUND0 = 3                      # NO SOUND: the rain alone; S brings the sound in
 DRONE_ON = [0, 1, 1, 0]
 GRAIN_ON = [1, 0, 1, 0]
 

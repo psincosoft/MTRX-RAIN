@@ -23,7 +23,7 @@ MEGA65.
 2. `MOUNT "MTRX-RAIN.D81"`
 3. `LOAD"*",8,1`, then `RUN`
 
-The disk's SHA-256: `c1cd3c976ce4943d3a01a223d12ef11c782d5b29b49dec95d33ddcf479348c14`.
+The disk's SHA-256: `a61a9a3f5b2e9453d6fa0134f151e639c863f251b32f023e228da005e05c736e`.
 
 The opening card, then the rain. The bottom row shows the settings; K shows the keys.
 
@@ -39,7 +39,7 @@ The opening card, then the rain. The bottom row shows the settings; K shows the 
 | K | the bottom row: the keys, nothing, the settings |
 | Q or RUN/STOP | the end |
 
-It starts at speed 35 %, density 50 %, GREEN, with SOUND+HUMM.
+It starts at speed 35 %, density 50 %, GREEN, and silent (NO SOUND).
 
 ## The palettes
 

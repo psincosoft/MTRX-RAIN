@@ -531,13 +531,14 @@ def main():
         Path(png).mkdir(parents=True, exist_ok=True)
     names = [a for a in args if not a.startswith('--')]
     runs = {
-        # 10 s of rain, the defaults (35 %, density 50 %, GREEN, sound and humm); pictures as it fills
+        # 10 s of rain, the defaults (35 %, density 50 %, GREEN, no sound); pictures as it fills
         'glass': dict(limit=500, shots=(50, 150, 300, 499),
                       want=[(0, lambda s: s[499]['full'] == 1 and s[499]['mcm'] and s[499]['fcol'],
                              'MCM and FCOLMCM on: 128 levels'),
                             (0, lambda s: s[50]['SPI'] == M.SPEED0 and s[50]['DNI'] == M.DENS0 and s[50]['THEME'] == 0
-                             and s[50]['SMODE'] == M.SOUND0 and s[50]['drone'] == ON,
-                             'starts at 35 %, density 50 %, GREEN, sound and humm'),
+                             and M.SOUND0 == 3 and s[50]['SMODE'] == 3 and s[50]['drone'] == OFF
+                             and s[499]['drone'] == OFF and s[499]['grains'] == 0,
+                             'starts at 35 %, density 50 %, GREEN, no sound (no humm, no grains for 10 s)'),
                             (0, lambda s: s[499]['chars'] == MIRRORED, 'the glyphs mirrored')]),
         # every key: speed, a palette, time stopped and run, the bar's pages, the four sound modes,
         # density, round the palettes to RAINBOW and back to GREEN; Q
@@ -557,13 +558,16 @@ def main():
                             'SPACE again: time runs (back to full speed)'),
                            (0, lambda s: s[245]['BARPG'] == 1 and s[285]['BARPG'] == 2 and s[285]['NROWS'] == 50
                             and s[330]['BARPG'] == 0 and s[330]['NROWS'] == M.BAR_ROW, 'K: keys, no bar, values'),
-                           (0, lambda s: s[345]['SMODE'] == 3 and s[345]['drone'] == OFF
-                            and s[358]['grains'] == s[345]['grains'], 'S: no sound (no humm, no grains)'),
-                           (0, lambda s: s[365]['SMODE'] == 0 and s[365]['drone'] == OFF
-                            and s[378]['grains'] > s[365]['grains'], 'S: the sound (grains, no humm)'),
-                           (0, lambda s: s[385]['SMODE'] == 1 and s[385]['drone'] == ON
-                            and s[398]['grains'] == s[385]['grains'], 'S: the humm (no grains)'),
-                           (0, lambda s: s[405]['SMODE'] == 2 and s[405]['drone'] == ON, 'S: both again'),
+                           (0, lambda s: s[330]['SMODE'] == 3 and s[330]['drone'] == OFF and s[330]['grains'] == 0,
+                            'silent through speed, palette, time and the bar (no humm, no grains)'),
+                           (0, lambda s: s[345]['SMODE'] == 0 and s[345]['drone'] == OFF
+                            and s[358]['grains'] > s[345]['grains'], 'S: the sound (grains, no humm)'),
+                           (0, lambda s: s[365]['SMODE'] == 1 and s[365]['drone'] == ON
+                            and s[378]['grains'] == s[365]['grains'], 'S: the humm (no grains)'),
+                           (0, lambda s: s[385]['SMODE'] == 2 and s[385]['drone'] == ON
+                            and s[398]['grains'] > s[385]['grains'], 'S: both (grains and humm)'),
+                           (0, lambda s: s[405]['SMODE'] == 3 and s[405]['drone'] == OFF
+                            and s[430]['grains'] == s[405]['grains'], 'S: no sound again (no humm, no grains)'),
                            (0, lambda s: s[430]['DNI'] == M.DENS0 - 2, 'down twice: density 30 %'),
                            (0, lambda s: s[455]['THEME'] == M.T_RAINBOW and s[455]['HUE'] < 16 and rainbow_pal(s[455])
                             and rainbow_pal(s[520]) and s[520]['HUE'] > s[455]['HUE'],
@@ -584,14 +588,15 @@ def main():
                                (0, lambda s: s[200]['THEME'] == M.T_RAINBOW and rainbow_pal_fb(s[200])
                                 and rainbow_pal_fb(s[299]) and s[299]['HUE'] != s[200]['HUE'],
                                 'RAINBOW in the 16 colours, moving on')]),
-        # HOTREG off as found, the colour RAM at offset $0800, NTSC, no sound from the start
+        # HOTREG off as found, the colour RAM at offset $0800, NTSC, the mailbox's no-sound flag (the default too)
         'variants': dict(limit=250, hot=False, colptr=0x0800, ntsc=True, mbx_flags=1, shots=(249,),
                          want=[(0, lambda s: s[249]['SMODE'] == 3 and s[249]['drone'] == OFF and s[249]['grains'] == 0,
-                                'no sound from the start')]),
-        # 250 %, density 100 %, RAINBOW: the busiest frame
-        'busy': dict(limit=400, keys=[(1, RIGHT)] * 7 + [(2, UP)] * 4 + [(3, P)] * 4, shots=(399,),
-                     want=[(0, lambda s: s[399]['SPI'] == 8 and s[399]['DNI'] == 7 and rainbow_pal(s[399]),
-                            '250 %, density 100 %, RAINBOW')]),
+                                'no sound with the flag')]),
+        # 250 %, density 100 %, RAINBOW, SOUND+HUMM: the busiest frame
+        'busy': dict(limit=400, keys=[(1, RIGHT)] * 7 + [(2, UP)] * 4 + [(3, P)] * 4 + [(4, S)] * 3, shots=(399,),
+                     want=[(0, lambda s: s[399]['SPI'] == 8 and s[399]['DNI'] == 7 and rainbow_pal(s[399])
+                            and s[399]['SMODE'] == 2 and s[399]['drone'] == ON and s[399]['grains'] > 0,
+                            '250 %, density 100 %, RAINBOW, SOUND+HUMM')]),
         # not an 80-column screen: nothing touched
         'mode': dict(limit=10, chrcount=40, expect=M.EXIT_MODE),
     }

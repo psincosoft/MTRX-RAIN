@@ -111,3 +111,5 @@ MEGA65 core's own source. Built with Python, py65, NumPy, Pillow and d64; the vi
 FFmpeg. Details in `mega65/CREDITS.txt`.
 
 MIT licence: free to use, change and share, with the notice. See [LICENSE](LICENSE).
+
+Libraries and archives may copy and keep these files, including for legal deposit.
